@@ -1,0 +1,36 @@
+# Pi Proxy REST 传感器
+# 用途：HA 定期轮询 pi-proxy，获取 Pi 的运行状态和最新回复
+# 放置位置：configuration.yaml 顶层
+#
+# 两个轮询端点的区别：
+#   /status（5秒）：获取实时运行状态（是否忙碌、消息数等），用于展示"正在执行中"
+#   /last（15秒）：获取最新回复文本，作为 webhook 失败时的兜底数据源
+
+rest:
+  # 轮询最新回复（每 15 秒）
+  # - 作为 webhook 回调的兜底：如果 webhook 失败，仍可通过此传感器获取回复
+  # - value_template 用 truthy 检查（不是 is defined），避免 null 值导致 slice 报错
+  # - 截断到 255 字符，匹配 HA state 字段的上限
+  - resource: "http://<PI_PROXY_HOST>/last"
+    headers:
+      Authorization: "Bearer <YOUR_TOKEN>"
+    sensor:
+      - name: "pi_last_reply"
+        value_template: "{{ value_json.text[:255] if value_json.text else 'unknown' }}"
+    scan_interval: 15
+
+  # 轮询运行状态（每 5 秒）
+  # - pi_is_streaming：Pi 是否正在输出（用于判断任务是否在执行中）
+  # - pi_message_count：当前会话的消息数（用于展示进度）
+  # - pi_running：pi-proxy 服务是否存活
+  - resource: "http://<PI_PROXY_HOST>/status"
+    headers:
+      Authorization: "Bearer <YOUR_TOKEN>"
+    sensor:
+      - name: "pi_is_streaming"
+        value_template: "{{ value_json.state.isStreaming }}"
+      - name: "pi_message_count"
+        value_template: "{{ value_json.state.messageCount }}"
+      - name: "pi_running"
+        value_template: "{{ value_json.running }}"
+    scan_interval: 5

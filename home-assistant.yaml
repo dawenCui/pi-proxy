@@ -1,0 +1,129 @@
+# ============================================================================
+# Home Assistant 集成示例
+#
+# 玩法：在 HA 输入一句话 → rest_command 发给 pi-http-service → pi 干活 →
+#       HA 轮询 /last 拿到回复 → 用 TTS 语音播报。
+#
+# 使用前把 <PI_HOST>、<token> 换成实际值（token 若未启用则删除 Authorization 头）。
+# ============================================================================
+
+# ---------------------------------------------------------------------------
+# 1) 发指令：rest_command
+# ---------------------------------------------------------------------------
+rest_command:
+  pi_prompt:
+    url: "http://<PI_HOST>:8787/prompt"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer <token>"
+    payload: '{"message": "{{ message }}", "wait": false}'
+
+  # 需要同步等回复的版本（注意：HA rest_command 默认超时 10s，长任务会失败，
+  # 建议用上面的异步版 + 轮询 /last）
+  pi_prompt_sync:
+    url: "http://<PI_HOST>:8787/prompt"
+    method: POST
+    timeout: 60
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer <token>"
+    payload: '{"message": "{{ message }}", "wait": true}'
+
+  # 直接执行 shell 命令
+  pi_bash:
+    url: "http://<PI_HOST>:8787/bash"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer <token>"
+    payload: '{"command": "{{ command }}"}'
+
+  # 中止当前任务
+  pi_abort:
+    url: "http://<PI_HOST>:8787/abort"
+    method: POST
+    headers:
+      Authorization: "Bearer <token>"
+
+# ---------------------------------------------------------------------------
+# 2) 读回复：rest 传感器（轮询）
+# ---------------------------------------------------------------------------
+rest:
+  - resource: "http://<PI_HOST>:8787/last"
+    headers:
+      Authorization: "Bearer <token>"
+    sensor:
+      - name: "pi_last_reply"
+        value_template: "{{ value_json.text }}"
+    scan_interval: 15
+
+  - resource: "http://<PI_HOST>:8787/status"
+    headers:
+      Authorization: "Bearer <token>"
+    sensor:
+      - name: "pi_is_streaming"
+        value_template: "{{ value_json.state.isStreaming }}"
+      - name: "pi_message_count"
+        value_template: "{{ value_json.state.messageCount }}"
+      - name: "pi_thinking_level"
+        value_template: "{{ value_json.state.thinkingLevel }}"
+    scan_interval: 30
+
+# ---------------------------------------------------------------------------
+# 3) 输入框 + 按钮
+# ---------------------------------------------------------------------------
+input_text:
+  pi_instruction:
+    name: 给 pi 的指令
+    max: 255
+
+input_boolean:
+  pi_reply_pending:
+    name: pi 回复待播报
+
+# ---------------------------------------------------------------------------
+# 4) 自动化：提交指令
+# ---------------------------------------------------------------------------
+automation:
+  - alias: "给 pi 下达指令"
+    trigger:
+      - platform: state
+        entity_id: input_text.pi_instruction
+        # 当输入框内容变化且非空时触发
+    condition:
+      - condition: template
+        value_template: "{{ trigger.to_state.state | trim != '' }}"
+    action:
+      - service: rest_command.pi_prompt
+        data:
+          message: "{{ trigger.to_state.state }}"
+
+  # 可选：用按钮触发（把 pi_instruction 换成固定文本或另一个输入框）
+  - alias: "按钮触发 pi"
+    trigger:
+      - platform: state
+        entity_id: input_button.pi_go
+    action:
+      - service: rest_command.pi_prompt
+        data:
+          message: "{{ states('input_text.pi_instruction') }}"
+
+# ---------------------------------------------------------------------------
+# 5) 自动化：回复到了 → TTS 播报
+# ---------------------------------------------------------------------------
+  - alias: "pi 回复语音播报"
+    trigger:
+      - platform: state
+        entity_id: sensor.pi_last_reply
+        not_to:
+          - "unknown"
+          - "unavailable"
+          - ""
+    action:
+      - service: tts.speak
+        target:
+          entity_id: media_player.your_speaker   # 换成你的音箱实体
+        data:
+          message: "{{ trigger.to_state.state }}"
+          cache: false

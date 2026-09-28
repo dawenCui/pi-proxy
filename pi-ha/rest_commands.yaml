@@ -1,0 +1,29 @@
+# Pi Proxy REST 命令
+# 用途：让 HA 通过 HTTP 向 pi-proxy 发送指令
+# 放置位置：configuration.yaml 顶层
+
+rest_command:
+  # 向 Pi 发送指令（fire-and-forget）
+  # - streamingBehavior: "followUp" 让新指令排队，避免 Pi 忙碌时被拒绝
+  # - wait: false 立即返回 202，不阻塞 HA
+  pi_prompt:
+    url: "http://<PI_PROXY_HOST>/prompt"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer <YOUR_TOKEN>"
+    payload: '{"message": "{{ message }}", "wait": false, "streamingBehavior": "followUp"}'
+
+  # 中止 Pi 当前任务
+  pi_abort:
+    url: "http://<PI_PROXY_HOST>/abort"
+    method: POST
+    headers:
+      Authorization: "Bearer <YOUR_TOKEN>"
+
+  # 手动查询 Pi 状态（一般不需要，传感器会自动轮询）
+  pi_status:
+    url: "http://<PI_PROXY_HOST>/status"
+    method: GET
+    headers:
+      Authorization: "Bearer <YOUR_TOKEN>"

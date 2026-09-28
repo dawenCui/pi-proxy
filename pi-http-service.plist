@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  macOS launchd 服务样例。
+  用法：
+    1. 修改下面的 WorkingDirectory / ProgramArguments / EnvironmentVariables
+    2. cp pi-http-service.plist ~/Library/LaunchAgents/com.pi.http-service.plist
+    3. launchctl load ~/Library/LaunchAgents/com.pi.http-service.plist
+    4. launchctl start com.pi.http-service
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.pi.http-service</string>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/dajun/Opt/pi_proxy</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>server.mjs</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- 暴露到局域网给 HA 用 -->
+    <key>PI_HTTP_HOST</key>
+    <string>0.0.0.0</string>
+    <key>PI_HTTP_PORT</key>
+    <string>8787</string>
+    <!-- 强烈建议设置 -->
+    <key>PI_HTTP_TOKEN</key>
+    <string>change-me-strong-token</string>
+    <!-- 可选：指定模型等 -->
+    <!-- <key>PI_ARGS</key><string>--model anthropic/claude-sonnet-4-5</string> -->
+  </dict>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/pi-http-service.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/pi-http-service.err.log</string>
+</dict>
+</plist>

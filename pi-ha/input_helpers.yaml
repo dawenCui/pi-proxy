@@ -1,0 +1,15 @@
+# Input helpers（输入辅助）
+# 用途：存储用户指令和 Pai 通知缓存
+# 放置位置：configuration.yaml 顶层
+#
+# - pi_instruction：用户在 HA 界面输入的指令文本（可选，用于手动触发）
+# - pai_latest_notification：webhook 回调写入的通知缓存，格式为 "[HH:MM:SS] 指令 → 回复"
+#   最大 255 字符，匹配 HA state 字段上限
+
+input_text:
+  pi_instruction:
+    name: "Pi指令"
+    max: 255
+  pai_latest_notification:
+    name: "Pai 通知缓存"
+    max: 255

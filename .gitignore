@@ -1,0 +1,11 @@
+# Sensitive config (contains real token, IPs)
+config.json
+
+# Logs
+logs/
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/

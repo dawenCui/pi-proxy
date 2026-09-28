@@ -1,0 +1,27 @@
+# 模板传感器：统一展示 Pai 任务状态
+# 用途：将多个传感器的数据合并成一个易读的状态描述
+# 放置位置：configuration.yaml 顶层
+#
+# 优先级逻辑：
+#   1. 如果 Pi 正在执行 → 显示"正在执行中"（数据来自 /status 轮询）
+#   2. 如果 webhook 通知有效 → 显示 webhook 通知（优先级最高，即时推送）
+#   3. 如果 /last 轮询有效 → 显示轮询回复（兜底，延迟最多 15 秒）
+#   4. 否则 → 显示"空闲待命"或"服务未运行"
+
+template:
+  - sensor:
+      - name: "Pai 任务状态"
+        unique_id: pai_task_status
+        state: >
+          {% set running = states('sensor.pi_running') %}
+          {% set streaming = states('sensor.pi_is_streaming') %}
+          {% set msg_count = states('sensor.pi_message_count') %}
+          {% set last_reply = states('sensor.pi_last_reply') %}
+          {% set notification = states('input_text.pai_latest_notification') %}
+          {% if streaming in ['True', 'true'] %}
+            正在执行中，消息数: {{ msg_count }}
+          {% elif running in ['True', 'true'] %}
+            空闲待命，消息数: {{ msg_count }}{% if notification not in ['unknown', 'unavailable', ''] %}，上次: {{ notification }}{% elif last_reply not in ['unknown', 'unavailable', ''] %}，最近回复: {{ last_reply[:80] }}{% endif %}
+          {% else %}
+            Pai服务未运行
+          {% endif %}

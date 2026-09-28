@@ -1,0 +1,45 @@
+# Webhook 自动化：接收 Pi 任务完成通知
+# 用途：pi-proxy 在 Pi 完成任务后，通过 webhook 即时推送结果到 HA
+# 放置位置：automations.yaml
+#
+# 工作流程：
+#   1. pi-proxy 发送 POST 到 /api/webhook/pi_task_completed
+#   2. 本自动化被触发，从 trigger.json 提取 text、prompt、timestamp
+#   3. 格式化为 "[HH:MM:SS] 原始指令 → 回复内容"
+#   4. 写入 input_text.pai_latest_notification（供模板传感器展示）
+#
+# 注意：
+#   - webhook_id 必须与 pi-proxy config.json 中的 webhookUrl 路径匹配
+#   - local_only: true 限制只接受局域网请求，提高安全性
+#   - 时间戳由 pi-proxy 提供本地时间（Asia/Shanghai），不是 UTC
+#   - 总长度控制在 255 字符以内
+
+- id: '1727600000001'
+  alias: Pai任务完成通知
+  description: '当Pai完成任务后，接收回调并更新通知传感器'
+  trigger:
+    - platform: webhook
+      webhook_id: pi_task_completed
+      local_only: true
+  action:
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.pai_latest_notification
+      data:
+        value: >
+          {% set text = trigger.json.text | default('任务已完成') %}
+          {% set prompt = trigger.json.prompt | default('') %}
+          {% set time = trigger.json.timestamp | default(now().isoformat()) %}
+          {% set ns = namespace(result='') %}
+          {% if prompt %}
+            {% set ns.result = '[' ~ time[11:19] ~ '] ' ~ prompt[:30] ~ ' → ' %}
+          {% else %}
+            {% set ns.result = '[' ~ time[11:19] ~ '] ' %}
+          {% endif %}
+          {% set remaining = 255 - ns.result | length %}
+          {% if remaining > 0 %}
+            {{ ns.result ~ text[:remaining] }}
+          {% else %}
+            {{ ns.result[:255] }}
+          {% endif %}
+  mode: queued
