@@ -14,7 +14,7 @@
   <string>com.pi.http-service</string>
 
   <key>WorkingDirectory</key>
-  <string>/Users/dajun/Opt/pi_proxy</string>
+  <string>/path/to/pi_proxy</string>
 
   <key>ProgramArguments</key>
   <array>

@@ -15,7 +15,7 @@ Home Assistant ──HTTP──▶ pi-http-service ──JSONL/RPC──▶ pi -
 ## 快速开始
 
 ```bash
-cd /Users/dajun/Opt/pi_workspace
+cd /path/to/pi_workspace
 
 # 1. （可选）复制一份配置
 cp config.example.json config.json   # 按需修改 host/token/model

@@ -4,7 +4,7 @@
   "token": "change-me-strong-token",
   "waitMs": 60000,
   "piBin": "pi",
-  "cwd": "/Users/dajun/Opt/pi_workspace",
+  "cwd": "/path/to/pi_workspace",
   "extraArgs": [
     "--model", "deepseek/deepseek-v4-pro"
   ],
